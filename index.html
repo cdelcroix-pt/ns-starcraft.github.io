@@ -244,6 +244,26 @@
   }
   .param-pair .param-block { margin-bottom: 0; }
 
+  .faction-id-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .faction-id-row .select-wrap { margin-bottom: 0; }
+  .id-field {
+    width: 100%;
+    background: #0D1424;
+    color: var(--text-main);
+    border: 1px solid var(--panel-edge);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .id-field::placeholder { color: var(--text-dim); font-weight: 400; }
+  .id-field:focus { outline: none; border-color: var(--text-dim); }
+
   .mission { padding-top: 20px; text-align: center; }
   .round-label {
     font-size: 10px;
@@ -398,6 +418,7 @@
   .report-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .report-player-name { font-weight: 800; font-size: 15px; }
   .report-player-faction { font-size: 12px; color: #777; margin-bottom: 6px; }
+  .report-list-id { font-size: 11px; color: #888; margin-bottom: 6px; }
   .report-score {
     font-size: 26px;
     font-weight: 800;
@@ -537,13 +558,13 @@
   ];
 
   const DEFAULT_PLAYERS = [
-    { id: 1, name: "BLUE FLEET", color: "#3AA0FF", faction: "", supply: 0, missionVP: 0, destroyed: 0 },
-    { id: 2, name: "RED SWARM", color: "#FF5252", faction: "", supply: 0, missionVP: 0, destroyed: 0 },
+    { id: 1, name: "BLUE FLEET", color: "#3AA0FF", faction: "", listId: "", supply: 0, missionVP: 0, destroyed: 0 },
+    { id: 2, name: "RED SWARM", color: "#FF5252", faction: "", listId: "", supply: 0, missionVP: 0, destroyed: 0 },
   ];
 
   // CONFIGURATION — colle ici l'URL de ton déploiement Google Apps Script (se terminant par /exec)
   // pour activer l'envoi automatique des rapports vers Google Sheets. Laisse vide pour désactiver.
-  const GOOGLE_SHEETS_ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbyPIAtBwl4HNCjpPps-BT1IaSt_6zt6VQVIhBh-EaFR3x6t5cJCPnISUlqYDzCYJpQp/exec";
+  const GOOGLE_SHEETS_ENDPOINT_URL = "";
 
   let state = {
     players: DEFAULT_PLAYERS.map((p) => ({ ...p })),
@@ -667,12 +688,14 @@
       result: resultLabel,
       player1Name: p1.name,
       player1Faction: p1.faction || "",
+      player1ListId: p1.listId || "",
       player1Score: p1.missionVP + p1.destroyed,
       player1MissionVP: p1.missionVP,
       player1Destroyed: p1.destroyed,
       player1Points: p1pts ? `${p1pts.mp} MP · ${p1pts.tp} TP` : "",
       player2Name: p2.name,
       player2Faction: p2.faction || "",
+      player2ListId: p2.listId || "",
       player2Score: p2.missionVP + p2.destroyed,
       player2MissionVP: p2.missionVP,
       player2Destroyed: p2.destroyed,
@@ -710,6 +733,7 @@
     ];
     state.players.forEach((p) => {
       lines.push(`${p.name} — ${p.faction || "Faction non choisie"}`);
+      if (p.listId) lines.push(`ID Liste : ${p.listId}`);
       lines.push(`Score : ${p.missionVP + p.destroyed} VP`);
       lines.push(`  Mission VP : ${p.missionVP}`);
       lines.push(`  Destroyed Supply : ${p.destroyed}`);
@@ -778,13 +802,16 @@
           <button class="first-badge ${state.firstPlayer !== p.id ? "inactive" : ""}" data-action="firstPlayer" data-id="${p.id}" title="Marquer comme premier joueur">1ST</button>
         </div>
 
-        <div class="select-wrap">
-          <select class="select-field" data-action="faction" data-id="${p.id}">
-            <option value="" ${p.faction === "" ? "selected" : ""} disabled>— Choisir —</option>
-            <option value="Protoss" ${p.faction === "Protoss" ? "selected" : ""}>Protoss</option>
-            <option value="Terran" ${p.faction === "Terran" ? "selected" : ""}>Terran</option>
-            <option value="Zerg" ${p.faction === "Zerg" ? "selected" : ""}>Zerg</option>
-          </select>
+        <div class="faction-id-row">
+          <div class="select-wrap">
+            <select class="select-field" data-action="faction" data-id="${p.id}">
+              <option value="" ${p.faction === "" ? "selected" : ""} disabled>— Choisir —</option>
+              <option value="Protoss" ${p.faction === "Protoss" ? "selected" : ""}>Protoss</option>
+              <option value="Terran" ${p.faction === "Terran" ? "selected" : ""}>Terran</option>
+              <option value="Zerg" ${p.faction === "Zerg" ? "selected" : ""}>Zerg</option>
+            </select>
+          </div>
+          <input class="id-field" type="text" id="listid-input-${p.id}" placeholder="ID LISTE" value="${escapeHtml(p.listId || "")}" />
         </div>
 
         <div class="section-label" style="text-align:center">SCORE</div>
@@ -938,6 +965,7 @@
             <span class="report-player-name">${escapeHtml(p.name)}</span>
           </div>
           <div class="report-player-faction">${escapeHtml(p.faction || "Faction non choisie")}</div>
+          ${p.listId ? `<div class="report-list-id">ID Liste : ${escapeHtml(p.listId)}</div>` : ""}
           <div class="report-score">${p.missionVP + p.destroyed} VP</div>
           <div class="report-breakdown">Mission VP : ${p.missionVP}</div>
           <div class="report-breakdown">Destroyed Supply : ${p.destroyed}</div>
@@ -1050,6 +1078,22 @@
         });
       }
     }
+
+    state.players.forEach((p) => {
+      const idInput = document.getElementById(`listid-input-${p.id}`);
+      if (idInput) {
+        idInput.addEventListener("input", (e) => {
+          const start = e.target.selectionStart;
+          const end = e.target.selectionEnd;
+          const upper = e.target.value.toUpperCase();
+          updatePlayer(p.id, { listId: upper });
+          if (e.target.value !== upper) {
+            e.target.value = upper;
+            e.target.setSelectionRange(start, end);
+          }
+        });
+      }
+    });
   }
 
   document.getElementById("app").addEventListener("change", (e) => {
