@@ -68,7 +68,7 @@
 
   .layout {
     display: grid;
-    grid-template-columns: 1fr clamp(160px, 24vw, 280px) 1fr;
+    grid-template-columns: 1fr clamp(160px, 28vw, 280px) 1fr;
     gap: 14px;
     max-width: 980px;
     margin: 0 auto;
@@ -77,6 +77,15 @@
   @media (max-width: 600px) {
     .layout { grid-template-columns: 1fr; }
     .mission { order: -1; }
+  }
+  @media (min-width: 601px) and (max-width: 1100px) {
+    .panel { padding: 12px; }
+    .player-head { margin-bottom: 10px; }
+    .faction-id-row { grid-template-columns: 1fr; gap: 6px; margin-bottom: 10px; }
+    .param-pair { grid-template-columns: 1fr; gap: 6px; margin-bottom: 10px; }
+    .track { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .score-row { margin: 4px 0 12px; }
+    .section-label { margin-bottom: 4px; }
   }
 
   .panel {
